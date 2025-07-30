@@ -254,3 +254,183 @@ variable "burst_limit" {
     error_message = "Burst limit must be between 1 and 5,000."
   }
 } 
+
+# ==============================================================================
+# Enhanced AI/ML Configuration Variables
+# ==============================================================================
+
+variable "ai_config" {
+  description = "AI/ML configuration"
+  type = object({
+    enable_model_invocation_logging = optional(bool, true)
+    enable_model_metrics = optional(bool, true)
+    enable_model_performance_monitoring = optional(bool, true)
+    enable_model_quality_monitoring = optional(bool, false)
+    enable_model_bias_detection = optional(bool, false)
+    enable_model_explainability = optional(bool, false)
+    enable_model_drift_detection = optional(bool, false)
+    enable_model_versioning = optional(bool, true)
+    enable_model_rollback = optional(bool, true)
+    enable_model_ab_testing = optional(bool, false)
+    enable_model_canary_deployment = optional(bool, false)
+    enable_model_blue_green_deployment = optional(bool, false)
+    enable_model_feature_store = optional(bool, false)
+    enable_model_experiment_tracking = optional(bool, false)
+    enable_model_hyperparameter_tuning = optional(bool, false)
+    enable_model_automl = optional(bool, false)
+    enable_model_mlops = optional(bool, false)
+    enable_model_governance = optional(bool, false)
+    enable_model_compliance = optional(bool, false)
+    enable_model_security = optional(bool, true)
+    enable_model_privacy = optional(bool, false)
+    enable_model_fairness = optional(bool, false)
+    enable_model_interpretability = optional(bool, false)
+    enable_model_robustness = optional(bool, false)
+  })
+  default = {}
+}
+
+variable "bedrock_models" {
+  description = "Map of Bedrock models to configure"
+  type = map(object({
+    model_id = string
+    model_arn = string
+    inference_type = optional(string, "ON_DEMAND")
+    customizations = optional(list(string), [])
+    output_modalities = optional(list(string), ["TEXT"])
+    input_modalities = optional(list(string), ["TEXT"])
+    supported_inference_types = optional(list(string), ["ON_DEMAND"])
+    supported_customizations = optional(list(string), [])
+    supported_output_modalities = optional(list(string), ["TEXT"])
+    supported_input_modalities = optional(list(string), ["TEXT"])
+    provider_name = optional(string, null)
+    model_name = optional(string, null)
+    model_arn = optional(string, null)
+    model_version = optional(string, null)
+    model_arn = optional(string, null)
+    model_arn = optional(string, null)
+    model_arn = optional(string, null)
+    model_arn = optional(string, null)
+    model_arn = optional(string, null)
+    model_arn = optional(string, null)
+  }))
+  default = {}
+}
+
+variable "lambda_ai_config" {
+  description = "Lambda AI configuration"
+  type = object({
+    enable_bedrock_invocation = optional(bool, true)
+    enable_bedrock_streaming = optional(bool, false)
+    enable_bedrock_async = optional(bool, false)
+    enable_bedrock_batch = optional(bool, false)
+    enable_bedrock_embeddings = optional(bool, false)
+    enable_bedrock_fine_tuning = optional(bool, false)
+    enable_bedrock_guardrails = optional(bool, false)
+    enable_bedrock_knowledge_bases = optional(bool, false)
+    enable_bedrock_agents = optional(bool, false)
+    enable_bedrock_workflows = optional(bool, false)
+    enable_bedrock_playgrounds = optional(bool, false)
+    enable_bedrock_experiments = optional(bool, false)
+    enable_bedrock_models = optional(bool, true)
+    enable_bedrock_invocation_logging = optional(bool, true)
+    enable_bedrock_metrics = optional(bool, true)
+    enable_bedrock_monitoring = optional(bool, true)
+    enable_bedrock_alerting = optional(bool, true)
+    enable_bedrock_dashboard = optional(bool, true)
+    enable_bedrock_audit_logging = optional(bool, true)
+    enable_bedrock_backup = optional(bool, false)
+    enable_bedrock_disaster_recovery = optional(bool, false)
+  })
+  default = {}
+}
+
+variable "api_gateway_ai_config" {
+  description = "API Gateway AI configuration"
+  type = object({
+    enable_ai_rate_limiting = optional(bool, true)
+    enable_ai_throttling = optional(bool, true)
+    enable_ai_caching = optional(bool, false)
+    enable_ai_compression = optional(bool, true)
+    enable_ai_encryption = optional(bool, true)
+    enable_ai_authentication = optional(bool, true)
+    enable_ai_authorization = optional(bool, true)
+    enable_ai_audit_logging = optional(bool, true)
+    enable_ai_monitoring = optional(bool, true)
+    enable_ai_alerting = optional(bool, true)
+    enable_ai_dashboard = optional(bool, true)
+    enable_ai_analytics = optional(bool, false)
+    enable_ai_insights = optional(bool, false)
+    enable_ai_reporting = optional(bool, false)
+    enable_ai_backup = optional(bool, false)
+    enable_ai_disaster_recovery = optional(bool, false)
+  })
+  default = {}
+}
+
+variable "monitoring_ai_config" {
+  description = "AI monitoring configuration"
+  type = object({
+    enable_model_performance_monitoring = optional(bool, true)
+    enable_model_quality_monitoring = optional(bool, false)
+    enable_model_bias_monitoring = optional(bool, false)
+    enable_model_drift_monitoring = optional(bool, false)
+    enable_model_explainability_monitoring = optional(bool, false)
+    enable_model_fairness_monitoring = optional(bool, false)
+    enable_model_robustness_monitoring = optional(bool, false)
+    enable_model_security_monitoring = optional(bool, true)
+    enable_model_privacy_monitoring = optional(bool, false)
+    enable_model_compliance_monitoring = optional(bool, false)
+    enable_model_governance_monitoring = optional(bool, false)
+    enable_model_mlops_monitoring = optional(bool, false)
+    enable_model_experiment_monitoring = optional(bool, false)
+    enable_model_feature_monitoring = optional(bool, false)
+    enable_model_data_monitoring = optional(bool, true)
+    enable_model_inference_monitoring = optional(bool, true)
+    enable_model_training_monitoring = optional(bool, false)
+    enable_model_deployment_monitoring = optional(bool, true)
+    enable_model_rollback_monitoring = optional(bool, true)
+    enable_model_version_monitoring = optional(bool, true)
+    enable_model_ab_testing_monitoring = optional(bool, false)
+    enable_model_canary_monitoring = optional(bool, false)
+    enable_model_blue_green_monitoring = optional(bool, false)
+    enable_model_feature_store_monitoring = optional(bool, false)
+    enable_model_hyperparameter_monitoring = optional(bool, false)
+    enable_model_automl_monitoring = optional(bool, false)
+  })
+  default = {}
+}
+
+variable "security_ai_config" {
+  description = "AI security configuration"
+  type = object({
+    enable_model_encryption = optional(bool, true)
+    enable_model_access_control = optional(bool, true)
+    enable_model_audit_logging = optional(bool, true)
+    enable_model_compliance = optional(bool, false)
+    enable_model_governance = optional(bool, false)
+    enable_model_privacy = optional(bool, false)
+    enable_model_fairness = optional(bool, false)
+    enable_model_bias_detection = optional(bool, false)
+    enable_model_explainability = optional(bool, false)
+    enable_model_interpretability = optional(bool, false)
+    enable_model_robustness = optional(bool, false)
+    enable_model_adversarial_protection = optional(bool, false)
+    enable_model_poisoning_protection = optional(bool, false)
+    enable_model_extraction_protection = optional(bool, false)
+    enable_model_inversion_protection = optional(bool, false)
+    enable_model_membership_inference_protection = optional(bool, false)
+    enable_model_model_inversion_protection = optional(bool, false)
+    enable_model_attribute_inference_protection = optional(bool, false)
+    enable_model_property_inference_protection = optional(bool, false)
+    enable_model_reconstruction_protection = optional(bool, false)
+    enable_model_extraction_protection = optional(bool, false)
+    enable_model_stealing_protection = optional(bool, false)
+    enable_model_evasion_protection = optional(bool, false)
+    enable_model_poisoning_protection = optional(bool, false)
+    enable_model_backdoor_protection = optional(bool, false)
+    enable_model_trojan_protection = optional(bool, false)
+    enable_model_trigger_protection = optional(bool, false)
+  })
+  default = {}
+} 
