@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gruntwork-io/terratest/modules/http-helper"
 	"github.com/gruntwork-io/terratest/modules/random"
 	"github.com/gruntwork-io/terratest/modules/terraform"
 	"github.com/stretchr/testify/assert"
@@ -22,8 +21,8 @@ func TestTerraformBedrockModule(t *testing.T) {
 	terraformOptions := &terraform.Options{
 		TerraformDir: "../examples/basic",
 		Vars: map[string]interface{}{
-			"name_prefix":     namePrefix,
-			"environment":     "dev",
+			"name_prefix":      namePrefix,
+			"environment":      "dev",
 			"bedrock_model_id": "anthropic.claude-3-sonnet-20240229-v1:0",
 		},
 	}
