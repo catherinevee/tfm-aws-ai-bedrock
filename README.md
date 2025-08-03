@@ -1,6 +1,37 @@
-# Amazon Bedrock + Lambda + API Gateway Terraform Module
+# Terraform AWS Bedrock Module
 
 A comprehensive Terraform module for deploying a serverless AI solution using Amazon Bedrock, AWS Lambda, and API Gateway. This module provides a complete infrastructure setup for creating AI-powered APIs with enterprise-grade features including monitoring, security, and scalability.
+
+## Resource Map
+
+![Architecture](docs/architecture.png)
+
+### Resource Flow
+
+1. Client sends request to API Gateway
+2. API Gateway forwards request to Lambda
+3. Lambda function calls Bedrock API
+4. Bedrock returns AI model response
+5. Response flows back through Lambda and API Gateway
+6. CloudWatch logs all operations
+7. WAF (optional) protects the API
+
+## Resource Types Used
+
+This module creates and manages the following AWS resources:
+
+| Category | Resource Type | Description |
+|----------|--------------|-------------|
+| Compute  | `aws_lambda_function` | Python Lambda function for Bedrock integration |
+| API      | `aws_api_gateway_rest_api` | REST API for model inference |
+| API      | `aws_api_gateway_stage` | API deployment stage (prod, dev) |
+| API      | `aws_api_gateway_method` | HTTP method configurations |
+| API      | `aws_api_gateway_integration` | Lambda integration settings |
+| IAM      | `aws_iam_role` | Execution role for Lambda |
+| IAM      | `aws_iam_role_policy` | Bedrock access permissions |
+| Logs     | `aws_cloudwatch_log_group` | Lambda function logs |
+| Security | `aws_wafv2_web_acl` (Optional) | WAF protection for API |
+| Monitoring | `aws_cloudwatch_metric_alarm` | Resource monitoring |
 
 ## Features
 
@@ -19,7 +50,48 @@ A comprehensive Terraform module for deploying a serverless AI solution using Am
 - Amazon Bedrock access enabled in your AWS account
 - Required AWS permissions for the services used
 
-### Required AWS Permissions
+## Usage
+
+```hcl
+module "bedrock_api" {
+  source = "terraform-aws-bedrock"
+
+  name_prefix     = "my-ai-api"
+  bedrock_model_id = "anthropic.claude-3-sonnet-20240229-v1:0"
+  
+  tags = {
+    Environment = "production"
+    Project     = "ai-services"
+  }
+
+  # Optional: Enable WAF protection
+  enable_waf = true
+  waf_rate_limit = 1000
+
+  # Optional: Configure monitoring
+  enable_monitoring = true
+  error_rate_threshold = 1.0
+}
+```
+
+## Requirements
+
+| Name | Version |
+|------|---------|
+| terraform | ~> 1.13.0 |
+| aws | ~> 6.2.0 |
+| azurerm | ~> 4.38.1 |
+| archive | ~> 2.0 |
+
+## Providers
+
+| Name | Version |
+|------|---------|
+| aws | ~> 6.2.0 |
+| archive | ~> 2.0 |
+| azurerm | ~> 4.38.1 |
+
+## Required AWS Permissions
 
 The deploying user/role needs the following permissions:
 
@@ -243,6 +315,90 @@ The module supports various Bedrock models including:
 - **AI21 Jurassic**: `ai21.j2-ultra-v1`, `ai21.j2-mid-v1`
 - **Cohere Command**: `cohere.command-text-v14`, `cohere.command-light-text-v14`
 - **Meta Llama**: `meta.llama2-13b-chat-v1`, `meta.llama2-70b-chat-v1`
+
+## Best Practices Implemented
+
+1. **Security**
+   - WAF protection (optional)
+   - API key authentication
+   - Least privilege IAM roles
+   - VPC isolation support
+   - CloudWatch logging
+
+2. **Performance**
+   - Configurable Lambda settings
+   - Response caching support
+   - Efficient token usage
+   - Request batching capability
+
+3. **Reliability**
+   - Automatic retries
+   - Circuit breaker pattern
+   - Error handling
+   - Fallback models
+
+4. **Cost Optimization**
+   - Configurable rate limits
+   - Token usage monitoring
+   - Resource tagging
+   - Cost allocation support
+
+5. **Operational Excellence**
+   - Comprehensive monitoring
+   - Detailed logging
+   - Alarm configuration
+   - Performance metrics
+
+## Terraform State Management
+
+This module is designed to work with both local and remote state. For production use, we recommend:
+
+1. Use remote state storage (e.g., S3 + DynamoDB)
+2. Enable state locking
+3. Enable state encryption
+4. Use workspaces for multi-environment management
+
+Example backend configuration:
+
+```hcl
+terraform {
+  backend "s3" {
+    bucket         = "my-terraform-states"
+    key            = "bedrock-api/terraform.tfstate"
+    region         = "us-east-1"
+    encrypt        = true
+    dynamodb_table = "terraform-locks"
+  }
+}
+```
+
+## Upgrade Guide
+
+### Upgrading from v1.x to v2.x
+
+1. Update your module source to reference v2.x
+2. Review the breaking changes in CHANGELOG.md
+3. Update your variable declarations as needed
+4. Run `terraform init -upgrade`
+5. Review the plan before applying
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Commit your changes with conventional commits
+4. Update documentation and examples
+5. Submit a pull request
+
+## Authors
+
+Module maintained by:
+- Your Organization (@github-handle)
+- Contributors List
+
+## License
+
+Apache 2.0 Licensed. See [LICENSE](LICENSE) for full details.
 
 ## Security Considerations
 

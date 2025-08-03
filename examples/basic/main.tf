@@ -1,27 +1,27 @@
 # Basic example for Amazon Bedrock + Lambda + API Gateway module
 
 terraform {
-  required_version = ">= 1.0"
-  
+  required_version = "~> 1.13.0"
+
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 5.0"
+      version = "~> 6.2.0"
     }
   }
 }
 
 provider "aws" {
-  region = "us-east-1"
+  region = "us-east-1"  # Region where Bedrock is available
 }
 
 module "bedrock_api" {
   source = "../../"
 
-  name_prefix = "basic-bedrock-api"
+  name_prefix = "basic-example"
   
   # Basic configuration with defaults
-  bedrock_model_id = "anthropic.claude-3-haiku-20240307-v1:0"
+  bedrock_model_id = "anthropic.claude-3-sonnet-20240229-v1:0"
   
   # Lambda configuration
   lambda_timeout   = 30
@@ -35,19 +35,27 @@ module "bedrock_api" {
   log_retention_days = 7
   
   tags = {
-    Environment = "development"
-    Project     = "bedrock-api-demo"
-    Team        = "ai-team"
+    Environment = "dev"
+    Project     = "example"
+    ManagedBy   = "terraform"
   }
 }
 
-# Output the API endpoint
-output "api_endpoint" {
+# Outputs
+output "api_url" {
   description = "API Gateway endpoint URL"
   value       = module.bedrock_api.api_gateway_url
 }
 
 output "lambda_function_name" {
+  description = "Name of the Lambda function"
+  value       = module.bedrock_api.lambda_function_name
+}
+
+output "cloudwatch_log_group" {
+  description = "Name of the CloudWatch log group"
+  value       = module.bedrock_api.cloudwatch_log_group_name
+}
   description = "Lambda function name"
   value       = module.bedrock_api.lambda_function_name
 }
