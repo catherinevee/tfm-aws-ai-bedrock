@@ -98,6 +98,90 @@ variable "log_level" {
   }
 }
 
+variable "enable_cloudwatch_logs_encryption" {
+  description = "Enable KMS encryption for CloudWatch logs"
+  type        = bool
+  default     = false
+}
+
+variable "cloudwatch_kms_key_id" {
+  description = "KMS key ID/ARN/Alias for CloudWatch logs encryption. Defaults to AWS-managed key if not specified."
+  type        = string
+  default     = null
+  sensitive   = true
+}
+
+variable "vpc_subnet_ids" {
+  description = "List of VPC subnet IDs for Lambda function. If provided, function will be deployed in VPC."
+  type        = list(string)
+  default     = null
+}
+
+variable "vpc_security_group_ids" {
+  description = "List of security group IDs for Lambda function VPC configuration"
+  type        = list(string)
+  default     = null
+}
+
+variable "waf_geo_restrictions" {
+  description = "List of allowed country codes for WAF geo restriction"
+  type        = list(string)
+  default     = ["US", "CA", "GB"]
+}
+
+variable "enable_waf" {
+  description = "Enable WAF protection for the API Gateway"
+  type        = bool
+  default     = false
+}
+
+variable "waf_rate_limit" {
+  description = "Rate limit for WAF rules (requests per 5 minutes)"
+  type        = number
+  default     = 2000
+}
+
+variable "environment" {
+  description = "Environment name (e.g., dev, staging, prod)"
+  type        = string
+  default     = "dev"
+  
+  validation {
+    condition     = contains(["dev", "staging", "prod"], var.environment)
+    error_message = "Environment must be one of: dev, staging, prod"
+  }
+}
+
+variable "enable_xray_tracing" {
+  description = "Enable X-Ray tracing for Lambda and API Gateway"
+  type        = bool
+  default     = false
+}
+
+variable "secondary_regions" {
+  description = "List of secondary regions for multi-region deployment"
+  type        = list(string)
+  default     = []
+}
+
+variable "auth_type" {
+  description = "API Gateway authorization type (NONE, AWS_IAM, COGNITO)"
+  type        = string
+  default     = "NONE"
+  
+  validation {
+    condition     = contains(["NONE", "AWS_IAM", "COGNITO"], var.auth_type)
+    error_message = "Auth type must be one of: NONE, AWS_IAM, COGNITO"
+  }
+}
+
+variable "cognito_user_pool_arn" {
+  description = "ARN of Cognito User Pool for API authorization"
+  type        = string
+  default     = null
+  sensitive   = true
+}
+
 variable "log_retention_days" {
   description = "CloudWatch log retention in days"
   type        = number

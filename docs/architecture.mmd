@@ -1,0 +1,48 @@
+```mermaid
+graph TB
+    %% Client and API Gateway
+    Client((Client)) --> APIG[API Gateway]
+    APIG -->|Request| WAF{WAF}
+    WAF -->|Allow| Auth{Cognito/IAM}
+    
+    %% Lambda Function
+    Auth -->|Authenticated| Lambda[Lambda Function]
+    Lambda -->|Invoke| Bedrock[Amazon Bedrock]
+    
+    %% Monitoring and Logging
+    Lambda -->|Logs| CW[CloudWatch Logs]
+    Lambda -->|Metrics| CWM[CloudWatch Metrics]
+    Lambda -->|Traces| XRay[X-Ray]
+    
+    %% VPC Resources
+    subgraph VPC[Optional VPC]
+        Lambda -->|Through| NAT[NAT Gateway]
+        NAT -->|To| IGW[Internet Gateway]
+    end
+    
+    %% S3 and KMS
+    Lambda -.->|Artifacts| S3[(S3 Bucket)]
+    CW -.->|Encryption| KMS[KMS Key]
+    
+    %% Response Path
+    Bedrock -->|Response| Lambda
+    Lambda -->|Response| APIG
+    APIG -->|Response| Client
+    
+    %% Multi-Region
+    subgraph Secondary Region
+        APIG2[API Gateway] -->|Failover| Lambda2[Lambda Function]
+        Lambda2 -->|Invoke| Bedrock2[Amazon Bedrock]
+    end
+    
+    %% DNS Failover
+    DNS[Route 53] -->|Primary| APIG
+    DNS -->|Failover| APIG2
+
+    classDef aws fill:#FF9900,stroke:#232F3E,stroke-width:2px;
+    classDef client fill:#85BBF0,stroke:#232F3E,stroke-width:2px;
+    classDef vpc fill:#E7E7E7,stroke:#232F3E,stroke-width:2px;
+    
+    class APIG,WAF,Lambda,Bedrock,CW,CWM,XRay,S3,KMS,APIG2,Lambda2,Bedrock2,DNS aws;
+    class Client client;
+    class VPC vpc;

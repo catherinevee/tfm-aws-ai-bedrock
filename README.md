@@ -80,7 +80,6 @@ module "bedrock_api" {
 |------|---------|
 | terraform | ~> 1.13.0 |
 | aws | ~> 6.2.0 |
-| azurerm | ~> 4.38.1 |
 | archive | ~> 2.0 |
 
 ## Providers
@@ -89,7 +88,107 @@ module "bedrock_api" {
 |------|---------|
 | aws | ~> 6.2.0 |
 | archive | ~> 2.0 |
-| azurerm | ~> 4.38.1 |
+
+## Upgrading
+
+### Upgrading to v1.x
+
+1. Update your provider versions:
+   ```hcl
+   terraform {
+     required_providers {
+       aws = {
+         source  = "hashicorp/aws"
+         version = "~> 6.2.0"
+       }
+     }
+     required_version = "~> 1.13.0"
+   }
+   ```
+
+2. If using VPC configuration:
+   ```hcl
+   module "bedrock_api" {
+     vpc_subnet_ids         = ["subnet-xxx", "subnet-yyy"]
+     vpc_security_group_ids = ["sg-zzz"]
+   }
+   ```
+
+3. For enhanced security:
+   ```hcl
+   module "bedrock_api" {
+     enable_cloudwatch_logs_encryption = true
+     enable_xray_tracing              = true
+     enable_waf                       = true
+   }
+   ```
+
+4. For multi-region deployment:
+   - See examples/advanced for complete configuration
+
+### Breaking Changes in v1.0.0
+
+- Removed Azure provider dependency
+- Changed Lambda artifact storage to S3
+- Updated WAF configuration format
+- Added required tags validation
+
+## Troubleshooting Guide
+
+### Common Issues
+
+1. **Lambda Function Timeout**
+   - **Symptom**: Lambda function execution timeouts
+   - **Solution**: Increase `lambda_timeout` variable (max 900 seconds)
+   - **Example**:
+     ```hcl
+     module "bedrock_api" {
+       lambda_timeout = 60
+     }
+     ```
+
+2. **API Gateway 429 Errors**
+   - **Symptom**: Too many requests errors
+   - **Solution**: Adjust WAF rate limits
+   - **Example**:
+     ```hcl
+     module "bedrock_api" {
+       enable_waf     = true
+       waf_rate_limit = 2000
+     }
+     ```
+
+3. **VPC Connectivity Issues**
+   - **Symptom**: Lambda cannot access Bedrock API
+   - **Solution**: Ensure NAT Gateway/Instance is configured
+   - **Check**: Verify security group outbound rules
+
+4. **CloudWatch Logs Missing**
+   - **Symptom**: No Lambda logs in CloudWatch
+   - **Solution**: Check IAM permissions and log settings
+   - **Verify**: `log_level` variable configuration
+
+5. **Cognito Authentication Errors**
+   - **Symptom**: API returns 401/403 errors
+   - **Solution**: Verify Cognito pool configuration
+   - **Check**: Token format and expiration
+
+### Performance Optimization
+
+1. **Lambda Performance**
+   - Use ARM64 architecture for better price/performance
+   - Adjust memory allocation based on workload
+   - Enable X-Ray for tracing
+
+2. **API Gateway Latency**
+   - Enable caching for repeated requests
+   - Use regional endpoints
+   - Monitor and adjust throttling
+
+3. **Cost Management**
+   - Enable detailed CloudWatch metrics
+   - Set up cost allocation tags
+   - Monitor API usage patterns
 
 ## Required AWS Permissions
 

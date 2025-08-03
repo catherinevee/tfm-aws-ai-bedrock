@@ -62,21 +62,23 @@ resource "aws_iam_role_policy_attachment" "lambda_bedrock_policy" {
 
 # CloudWatch Log Group for Lambda
 resource "aws_cloudwatch_log_group" "lambda_logs" {
-  name              = "/aws/lambda/${var.name_prefix}-bedrock-lambda"
+  name              = local.log_group_name
   retention_in_days = var.log_retention_days
+  kms_key_id       = var.enable_cloudwatch_logs_encryption ? data.aws_kms_key.cloudwatch[0].arn : null
 
-  tags = var.tags
+  tags = local.common_tags
 }
 
 # Lambda Function
 resource "aws_lambda_function" "bedrock_lambda" {
   filename         = data.archive_file.lambda_zip.output_path
-  function_name    = "${var.name_prefix}-bedrock-lambda"
+  function_name    = local.lambda_name
   role            = aws_iam_role.lambda_role.arn
   handler         = "index.handler"
   runtime         = var.lambda_runtime
   timeout         = var.lambda_timeout
   memory_size     = var.lambda_memory_size
+  publish         = true
 
   environment {
     variables = {
@@ -85,12 +87,20 @@ resource "aws_lambda_function" "bedrock_lambda" {
     }
   }
 
+  dynamic "vpc_config" {
+    for_each = var.vpc_subnet_ids != null ? [1] : []
+    content {
+      subnet_ids         = var.vpc_subnet_ids
+      security_group_ids = var.vpc_security_group_ids
+    }
+  }
+
   depends_on = [
     aws_iam_role_policy_attachment.lambda_bedrock_policy,
     aws_cloudwatch_log_group.lambda_logs
   ]
 
-  tags = var.tags
+  tags = local.common_tags
 }
 
 # Lambda function code archive
