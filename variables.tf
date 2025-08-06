@@ -1,7 +1,6 @@
-# Variables for Amazon Bedrock + Lambda + API Gateway Terraform Module
-
+# Core Configuration
 variable "name_prefix" {
-  description = "Prefix for all resource names"
+  description = "Prefix for resource names"
   type        = string
   default     = "bedrock-api"
 
@@ -12,7 +11,7 @@ variable "name_prefix" {
 }
 
 variable "tags" {
-  description = "Tags to apply to all resources"
+  description = "Tags applied to all resources"
   type        = map(string)
   default = {
     Environment = "production"
@@ -21,19 +20,15 @@ variable "tags" {
   }
 }
 
+# Bedrock Model Configuration
 variable "bedrock_model_id" {
-  description = "Amazon Bedrock model ID to use"
+  description = "Bedrock model ID (e.g., anthropic.claude-3-sonnet-20240229-v1:0)"
   type        = string
   default     = "anthropic.claude-3-sonnet-20240229-v1:0"
-
-  validation {
-    condition = can(regex("^[a-zA-Z0-9.-]+:[0-9]+$", var.bedrock_model_id))
-    error_message = "Bedrock model ID must be in the format 'provider.model:version'."
-  }
 }
 
 variable "bedrock_model_arns" {
-  description = "List of Bedrock model ARNs that Lambda can access"
+  description = "List of Bedrock model ARNs Lambda can access"
   type        = list(string)
   default = [
     "arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-3-sonnet-20240229-v1:0",
@@ -42,59 +37,61 @@ variable "bedrock_model_arns" {
   ]
 }
 
+# Lambda Configuration
 variable "lambda_runtime" {
-  description = "Lambda function runtime"
+  description = "Python runtime version"
   type        = string
   default     = "python3.11"
 
   validation {
     condition = contains([
-      "python3.8",
-      "python3.9",
-      "python3.10",
-      "python3.11",
-      "python3.12"
+      "python3.8", "python3.9", "python3.10", "python3.11", "python3.12"
     ], var.lambda_runtime)
-    error_message = "Lambda runtime must be a supported Python version."
+    error_message = "Must be a supported Python runtime version."
   }
 }
 
 variable "lambda_timeout" {
-  description = "Lambda function timeout in seconds"
+  description = "Function timeout in seconds (1-900)"
   type        = number
   default     = 30
 
   validation {
     condition     = var.lambda_timeout >= 1 && var.lambda_timeout <= 900
-    error_message = "Lambda timeout must be between 1 and 900 seconds."
+    error_message = "Timeout must be between 1 and 900 seconds."
   }
 }
 
 variable "lambda_memory_size" {
-  description = "Lambda function memory size in MB"
+  description = "Memory allocation in MB (128-10240)"
   type        = number
   default     = 512
 
   validation {
     condition     = var.lambda_memory_size >= 128 && var.lambda_memory_size <= 10240
-    error_message = "Lambda memory size must be between 128 and 10240 MB."
+    error_message = "Memory must be between 128 and 10240 MB."
   }
 }
 
 variable "log_level" {
-  description = "Log level for Lambda function"
+  description = "Lambda logging level"
   type        = string
   default     = "INFO"
 
   validation {
-    condition = contains([
-      "DEBUG",
-      "INFO",
-      "WARNING",
-      "ERROR",
-      "CRITICAL"
-    ], var.log_level)
-    error_message = "Log level must be one of: DEBUG, INFO, WARNING, ERROR, CRITICAL."
+    condition = contains(["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"], var.log_level)
+    error_message = "Must be valid log level."
+  }
+}
+
+variable "log_retention_days" {
+  description = "CloudWatch log retention period"
+  type        = number
+  default     = 14
+
+  validation {
+    condition     = contains([1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731, 1827, 3653], var.log_retention_days)
+    error_message = "Must be valid CloudWatch retention period."
   }
 }
 
@@ -337,184 +334,17 @@ variable "burst_limit" {
     condition     = var.burst_limit >= 1 && var.burst_limit <= 5000
     error_message = "Burst limit must be between 1 and 5,000."
   }
-} 
-
-# ==============================================================================
-# Enhanced AI/ML Configuration Variables
-# ==============================================================================
-
-variable "ai_config" {
-  description = "AI/ML configuration"
-  type = object({
-    enable_model_invocation_logging = optional(bool, true)
-    enable_model_metrics = optional(bool, true)
-    enable_model_performance_monitoring = optional(bool, true)
-    enable_model_quality_monitoring = optional(bool, false)
-    enable_model_bias_detection = optional(bool, false)
-    enable_model_explainability = optional(bool, false)
-    enable_model_drift_detection = optional(bool, false)
-    enable_model_versioning = optional(bool, true)
-    enable_model_rollback = optional(bool, true)
-    enable_model_ab_testing = optional(bool, false)
-    enable_model_canary_deployment = optional(bool, false)
-    enable_model_blue_green_deployment = optional(bool, false)
-    enable_model_feature_store = optional(bool, false)
-    enable_model_experiment_tracking = optional(bool, false)
-    enable_model_hyperparameter_tuning = optional(bool, false)
-    enable_model_automl = optional(bool, false)
-    enable_model_mlops = optional(bool, false)
-    enable_model_governance = optional(bool, false)
-    enable_model_compliance = optional(bool, false)
-    enable_model_security = optional(bool, true)
-    enable_model_privacy = optional(bool, false)
-    enable_model_fairness = optional(bool, false)
-    enable_model_interpretability = optional(bool, false)
-    enable_model_robustness = optional(bool, false)
-  })
-  default = {}
 }
 
-variable "bedrock_models" {
-  description = "Map of Bedrock models to configure"
-  type = map(object({
-    model_id = string
-    model_arn = string
-    inference_type = optional(string, "ON_DEMAND")
-    customizations = optional(list(string), [])
-    output_modalities = optional(list(string), ["TEXT"])
-    input_modalities = optional(list(string), ["TEXT"])
-    supported_inference_types = optional(list(string), ["ON_DEMAND"])
-    supported_customizations = optional(list(string), [])
-    supported_output_modalities = optional(list(string), ["TEXT"])
-    supported_input_modalities = optional(list(string), ["TEXT"])
-    provider_name = optional(string, null)
-    model_name = optional(string, null)
-    model_arn = optional(string, null)
-    model_version = optional(string, null)
-    model_arn = optional(string, null)
-    model_arn = optional(string, null)
-    model_arn = optional(string, null)
-    model_arn = optional(string, null)
-    model_arn = optional(string, null)
-    model_arn = optional(string, null)
-  }))
-  default = {}
+# VPC Configuration (Optional)
+variable "vpc_subnet_ids" {
+  description = "VPC subnet IDs for Lambda (optional)"
+  type        = list(string)
+  default     = null
 }
 
-variable "lambda_ai_config" {
-  description = "Lambda AI configuration"
-  type = object({
-    enable_bedrock_invocation = optional(bool, true)
-    enable_bedrock_streaming = optional(bool, false)
-    enable_bedrock_async = optional(bool, false)
-    enable_bedrock_batch = optional(bool, false)
-    enable_bedrock_embeddings = optional(bool, false)
-    enable_bedrock_fine_tuning = optional(bool, false)
-    enable_bedrock_guardrails = optional(bool, false)
-    enable_bedrock_knowledge_bases = optional(bool, false)
-    enable_bedrock_agents = optional(bool, false)
-    enable_bedrock_workflows = optional(bool, false)
-    enable_bedrock_playgrounds = optional(bool, false)
-    enable_bedrock_experiments = optional(bool, false)
-    enable_bedrock_models = optional(bool, true)
-    enable_bedrock_invocation_logging = optional(bool, true)
-    enable_bedrock_metrics = optional(bool, true)
-    enable_bedrock_monitoring = optional(bool, true)
-    enable_bedrock_alerting = optional(bool, true)
-    enable_bedrock_dashboard = optional(bool, true)
-    enable_bedrock_audit_logging = optional(bool, true)
-    enable_bedrock_backup = optional(bool, false)
-    enable_bedrock_disaster_recovery = optional(bool, false)
-  })
-  default = {}
-}
-
-variable "api_gateway_ai_config" {
-  description = "API Gateway AI configuration"
-  type = object({
-    enable_ai_rate_limiting = optional(bool, true)
-    enable_ai_throttling = optional(bool, true)
-    enable_ai_caching = optional(bool, false)
-    enable_ai_compression = optional(bool, true)
-    enable_ai_encryption = optional(bool, true)
-    enable_ai_authentication = optional(bool, true)
-    enable_ai_authorization = optional(bool, true)
-    enable_ai_audit_logging = optional(bool, true)
-    enable_ai_monitoring = optional(bool, true)
-    enable_ai_alerting = optional(bool, true)
-    enable_ai_dashboard = optional(bool, true)
-    enable_ai_analytics = optional(bool, false)
-    enable_ai_insights = optional(bool, false)
-    enable_ai_reporting = optional(bool, false)
-    enable_ai_backup = optional(bool, false)
-    enable_ai_disaster_recovery = optional(bool, false)
-  })
-  default = {}
-}
-
-variable "monitoring_ai_config" {
-  description = "AI monitoring configuration"
-  type = object({
-    enable_model_performance_monitoring = optional(bool, true)
-    enable_model_quality_monitoring = optional(bool, false)
-    enable_model_bias_monitoring = optional(bool, false)
-    enable_model_drift_monitoring = optional(bool, false)
-    enable_model_explainability_monitoring = optional(bool, false)
-    enable_model_fairness_monitoring = optional(bool, false)
-    enable_model_robustness_monitoring = optional(bool, false)
-    enable_model_security_monitoring = optional(bool, true)
-    enable_model_privacy_monitoring = optional(bool, false)
-    enable_model_compliance_monitoring = optional(bool, false)
-    enable_model_governance_monitoring = optional(bool, false)
-    enable_model_mlops_monitoring = optional(bool, false)
-    enable_model_experiment_monitoring = optional(bool, false)
-    enable_model_feature_monitoring = optional(bool, false)
-    enable_model_data_monitoring = optional(bool, true)
-    enable_model_inference_monitoring = optional(bool, true)
-    enable_model_training_monitoring = optional(bool, false)
-    enable_model_deployment_monitoring = optional(bool, true)
-    enable_model_rollback_monitoring = optional(bool, true)
-    enable_model_version_monitoring = optional(bool, true)
-    enable_model_ab_testing_monitoring = optional(bool, false)
-    enable_model_canary_monitoring = optional(bool, false)
-    enable_model_blue_green_monitoring = optional(bool, false)
-    enable_model_feature_store_monitoring = optional(bool, false)
-    enable_model_hyperparameter_monitoring = optional(bool, false)
-    enable_model_automl_monitoring = optional(bool, false)
-  })
-  default = {}
-}
-
-variable "security_ai_config" {
-  description = "AI security configuration"
-  type = object({
-    enable_model_encryption = optional(bool, true)
-    enable_model_access_control = optional(bool, true)
-    enable_model_audit_logging = optional(bool, true)
-    enable_model_compliance = optional(bool, false)
-    enable_model_governance = optional(bool, false)
-    enable_model_privacy = optional(bool, false)
-    enable_model_fairness = optional(bool, false)
-    enable_model_bias_detection = optional(bool, false)
-    enable_model_explainability = optional(bool, false)
-    enable_model_interpretability = optional(bool, false)
-    enable_model_robustness = optional(bool, false)
-    enable_model_adversarial_protection = optional(bool, false)
-    enable_model_poisoning_protection = optional(bool, false)
-    enable_model_extraction_protection = optional(bool, false)
-    enable_model_inversion_protection = optional(bool, false)
-    enable_model_membership_inference_protection = optional(bool, false)
-    enable_model_model_inversion_protection = optional(bool, false)
-    enable_model_attribute_inference_protection = optional(bool, false)
-    enable_model_property_inference_protection = optional(bool, false)
-    enable_model_reconstruction_protection = optional(bool, false)
-    enable_model_extraction_protection = optional(bool, false)
-    enable_model_stealing_protection = optional(bool, false)
-    enable_model_evasion_protection = optional(bool, false)
-    enable_model_poisoning_protection = optional(bool, false)
-    enable_model_backdoor_protection = optional(bool, false)
-    enable_model_trojan_protection = optional(bool, false)
-    enable_model_trigger_protection = optional(bool, false)
-  })
-  default = {}
+variable "vpc_security_group_ids" {
+  description = "VPC security group IDs for Lambda (optional)"
+  type        = list(string)
+  default     = null
 } 

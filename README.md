@@ -1,62 +1,53 @@
 # Terraform AWS Bedrock Module
 
-A comprehensive Terraform module for deploying a serverless AI solution using Amazon Bedrock, AWS Lambda, and API Gateway. This module provides a complete infrastructure setup for creating AI-powered APIs with enterprise-grade features including monitoring, security, and scalability.
+Terraform infrastructure for exposing Amazon Bedrock models through a Lambda-backed REST API. Sets up the full request pipeline from API Gateway to Bedrock, with optional WAF protection and monitoring.
 
-## Resource Map
+## Architecture
 
 ![Architecture](docs/architecture.png)
 
-### Resource Flow
+### Request Flow
 
-1. Client sends request to API Gateway
-2. API Gateway forwards request to Lambda
-3. Lambda function calls Bedrock API
-4. Bedrock returns AI model response
-5. Response flows back through Lambda and API Gateway
-6. CloudWatch logs all operations
-7. WAF (optional) protects the API
+Client → API Gateway → Lambda → Bedrock → Response back through stack
 
-## Resource Types Used
+CloudWatch captures all execution logs. WAF blocks malicious requests when enabled.
 
-This module creates and manages the following AWS resources:
+## Resources Created
 
-| Category | Resource Type | Description |
-|----------|--------------|-------------|
-| Compute  | `aws_lambda_function` | Python Lambda function for Bedrock integration |
-| API      | `aws_api_gateway_rest_api` | REST API for model inference |
-| API      | `aws_api_gateway_stage` | API deployment stage (prod, dev) |
-| API      | `aws_api_gateway_method` | HTTP method configurations |
-| API      | `aws_api_gateway_integration` | Lambda integration settings |
-| IAM      | `aws_iam_role` | Execution role for Lambda |
-| IAM      | `aws_iam_role_policy` | Bedrock access permissions |
-| Logs     | `aws_cloudwatch_log_group` | Lambda function logs |
-| Security | `aws_wafv2_web_acl` (Optional) | WAF protection for API |
-| Monitoring | `aws_cloudwatch_metric_alarm` | Resource monitoring |
+| Category | Resource | Purpose |
+|----------|----------|---------|
+| Compute  | `aws_lambda_function` | Handles Bedrock API calls and response formatting |
+| API      | `aws_api_gateway_rest_api` | Exposes HTTP endpoint for model inference |
+| API      | `aws_api_gateway_stage` | Manages deployment stages (prod, dev, staging) |
+| IAM      | `aws_iam_role` | Lambda execution role with minimal Bedrock permissions |
+| IAM      | `aws_iam_role_policy` | Bedrock model access and CloudWatch logging |
+| Logs     | `aws_cloudwatch_log_group` | Lambda execution and error logs |
+| Security | `aws_wafv2_web_acl` | Rate limiting and basic attack protection |
+| Monitor  | `aws_cloudwatch_metric_alarm` | Lambda error and duration alerts |
 
-## Features
+## What You Get
 
-- **Amazon Bedrock Integration**: Support for multiple Bedrock models (Claude, Titan, etc.)
-- **Serverless Architecture**: Lambda function with automatic scaling
-- **API Gateway**: RESTful API with CORS support
-- **Security**: Optional WAF protection and API key authentication
-- **Monitoring**: CloudWatch alarms and logging
-- **Flexible Configuration**: Extensive customization options
-- **Best Practices**: Follows AWS and Terraform best practices
+- **Model Access**: Direct HTTP API to any Bedrock model 
+- **Auto-scaling**: Lambda handles concurrent requests without configuration
+- **Request Validation**: Input sanitization and error handling
+- **CORS Support**: Ready for web application integration  
+- **Rate Limiting**: Configurable throttling via API Gateway and WAF
+- **Monitoring**: CloudWatch alarms for errors and performance issues
 
-## Prerequisites
+## Before You Start
 
 - Terraform >= 1.0
-- AWS CLI configured with appropriate permissions
-- Amazon Bedrock access enabled in your AWS account
-- Required AWS permissions for the services used
+- AWS CLI with proper credentials configured
+- Bedrock model access enabled in your target region
+- IAM permissions for Lambda, API Gateway, and Bedrock services
 
-## Usage
+## Quick Start
 
 ```hcl
 module "bedrock_api" {
   source = "terraform-aws-bedrock"
 
-  name_prefix     = "my-ai-api"
+  name_prefix      = "my-ai-api"
   bedrock_model_id = "anthropic.claude-3-sonnet-20240229-v1:0"
   
   tags = {
@@ -64,13 +55,9 @@ module "bedrock_api" {
     Project     = "ai-services"
   }
 
-  # Optional: Enable WAF protection
-  enable_waf = true
+  # Optional: Add WAF protection for production
+  enable_waf     = true
   waf_rate_limit = 1000
-
-  # Optional: Configure monitoring
-  enable_monitoring = true
-  error_rate_threshold = 1.0
 }
 ```
 
@@ -133,66 +120,33 @@ module "bedrock_api" {
 - Updated WAF configuration format
 - Added required tags validation
 
-## Troubleshooting Guide
+## Troubleshooting
 
-### Common Issues
+### Lambda Timeouts
+Increase `lambda_timeout` for complex prompts. Max is 900 seconds.
+```hcl
+lambda_timeout = 60  # seconds
+```
 
-1. **Lambda Function Timeout**
-   - **Symptom**: Lambda function execution timeouts
-   - **Solution**: Increase `lambda_timeout` variable (max 900 seconds)
-   - **Example**:
-     ```hcl
-     module "bedrock_api" {
-       lambda_timeout = 60
-     }
-     ```
+### Rate Limiting Issues
+API Gateway returns 429 errors when limits are exceeded. Adjust WAF settings:
+```hcl
+enable_waf     = true
+waf_rate_limit = 2000  # requests per 5 minutes
+```
 
-2. **API Gateway 429 Errors**
-   - **Symptom**: Too many requests errors
-   - **Solution**: Adjust WAF rate limits
-   - **Example**:
-     ```hcl
-     module "bedrock_api" {
-       enable_waf     = true
-       waf_rate_limit = 2000
-     }
-     ```
+### VPC Connectivity Problems
+Lambda needs internet access to reach Bedrock. Ensure NAT Gateway exists and security groups allow outbound HTTPS.
 
-3. **VPC Connectivity Issues**
-   - **Symptom**: Lambda cannot access Bedrock API
-   - **Solution**: Ensure NAT Gateway/Instance is configured
-   - **Check**: Verify security group outbound rules
+### Missing Logs
+Verify IAM permissions include `logs:CreateLogGroup` and `logs:PutLogEvents`. Check `log_level` variable setting.
 
-4. **CloudWatch Logs Missing**
-   - **Symptom**: No Lambda logs in CloudWatch
-   - **Solution**: Check IAM permissions and log settings
-   - **Verify**: `log_level` variable configuration
+### Authentication Failures
+When using API keys, verify token format and that usage plan is attached correctly.
 
-5. **Cognito Authentication Errors**
-   - **Symptom**: API returns 401/403 errors
-   - **Solution**: Verify Cognito pool configuration
-   - **Check**: Token format and expiration
+## IAM Permissions Needed
 
-### Performance Optimization
-
-1. **Lambda Performance**
-   - Use ARM64 architecture for better price/performance
-   - Adjust memory allocation based on workload
-   - Enable X-Ray for tracing
-
-2. **API Gateway Latency**
-   - Enable caching for repeated requests
-   - Use regional endpoints
-   - Monitor and adjust throttling
-
-3. **Cost Management**
-   - Enable detailed CloudWatch metrics
-   - Set up cost allocation tags
-   - Monitor API usage patterns
-
-## Required AWS Permissions
-
-The deploying user/role needs the following permissions:
+The deploying user needs these permissions:
 
 ```json
 {
@@ -202,20 +156,11 @@ The deploying user/role needs the following permissions:
       "Effect": "Allow",
       "Action": [
         "iam:CreateRole",
-        "iam:CreatePolicy",
-        "iam:AttachRolePolicy",
-        "iam:PassRole",
+        "iam:AttachRolePolicy", 
         "lambda:CreateFunction",
-        "lambda:CreateEventSourceMapping",
-        "lambda:AddPermission",
         "apigateway:*",
         "logs:CreateLogGroup",
-        "logs:CreateLogStream",
-        "logs:PutLogEvents",
-        "cloudwatch:PutMetricAlarm",
-        "wafv2:*",
-        "bedrock:InvokeModel",
-        "bedrock:InvokeModelWithResponseStream"
+        "bedrock:InvokeModel"
       ],
       "Resource": "*"
     }
@@ -223,10 +168,9 @@ The deploying user/role needs the following permissions:
 }
 ```
 
-## Usage
+## Examples
 
-### Basic Example
-
+### Basic Setup
 ```hcl
 module "bedrock_api" {
   source = "./tfm-aws-ai-bedrock"
@@ -236,54 +180,34 @@ module "bedrock_api" {
   tags = {
     Environment = "production"
     Project     = "ai-api"
-    Team        = "data-science"
   }
 }
 ```
 
-### Advanced Example with All Features
-
+### Production Configuration
 ```hcl
 module "bedrock_api" {
   source = "./tfm-aws-ai-bedrock"
 
-  name_prefix = "production-ai-api"
-  
-  # Bedrock Configuration
+  name_prefix      = "prod-ai-api"
   bedrock_model_id = "anthropic.claude-3-sonnet-20240229-v1:0"
-  max_tokens       = 2000
-  temperature      = 0.7
-  top_p           = 0.9
   
-  # Lambda Configuration
-  lambda_runtime   = "python3.11"
-  lambda_timeout   = 60
+  # Lambda settings
+  lambda_timeout     = 60
   lambda_memory_size = 1024
   
-  # API Gateway Configuration
-  api_stage_name = "v1"
-  enable_cors    = true
-  cors_allowed_origins = ["https://myapp.com", "https://admin.myapp.com"]
+  # Security
+  enable_waf     = true
+  waf_rate_limit = 5000
+  enable_api_key = true
   
-  # Security Configuration
-  enable_waf        = true
-  waf_rate_limit    = 5000
-  enable_api_key    = true
-  rate_limit        = 100
-  burst_limit       = 200
-  
-  # Monitoring Configuration
-  enable_monitoring = true
-  log_retention_days = 30
-  alarm_actions = [
-    "arn:aws:sns:us-east-1:123456789012:alerts-topic"
-  ]
+  # CORS for web apps  
+  cors_allowed_origins = ["https://myapp.com"]
   
   tags = {
     Environment = "production"
     Project     = "ai-api"
-    Team        = "data-science"
-    CostCenter  = "ai-ml"
+    CostCenter  = "ml-team"
   }
 }
 ```
@@ -354,12 +278,13 @@ module "bedrock_api" {
 
 ### Request Format
 
+Send POST requests to `{api_gateway_url}/bedrock`:
+
 ```json
 {
-  "prompt": "Your text prompt here",
+  "prompt": "Explain quantum computing",
   "max_tokens": 1000,
-  "temperature": 0.7,
-  "top_p": 0.9
+  "temperature": 0.7
 }
 ```
 
@@ -368,192 +293,57 @@ module "bedrock_api" {
 ```json
 {
   "success": true,
-  "content": "Generated text response from the model",
+  "content": "Quantum computing uses quantum mechanics...",
   "model_id": "anthropic.claude-3-sonnet-20240229-v1:0",
   "usage": {
     "input_tokens": 10,
     "output_tokens": 50
-  },
-  "metadata": {
-    "execution_time_ms": 1250.5,
-    "timestamp": 1640995200,
-    "request_id": "abc123-def456"
   }
 }
 ```
 
-### Example cURL Request
+### cURL Example
 
 ```bash
-# Basic request
-curl -X POST https://your-api-gateway-url.amazonaws.com/prod/bedrock \
+curl -X POST https://your-api.amazonaws.com/prod/bedrock \
   -H "Content-Type: application/json" \
-  -d '{
-    "prompt": "Explain quantum computing in simple terms",
-    "max_tokens": 500,
-    "temperature": 0.7
-  }'
-
-# With API key (if enabled)
-curl -X POST https://your-api-gateway-url.amazonaws.com/prod/bedrock \
-  -H "Content-Type: application/json" \
-  -H "x-api-key: your-api-key-here" \
-  -d '{
-    "prompt": "Explain quantum computing in simple terms",
-    "max_tokens": 500,
-    "temperature": 0.7
-  }'
+  -d '{"prompt": "Hello world", "max_tokens": 100}'
 ```
 
-## Supported Bedrock Models
+## Supported Models
 
-The module supports various Bedrock models including:
-
+Compatible with all Bedrock foundation models:
 - **Anthropic Claude**: `anthropic.claude-3-sonnet-20240229-v1:0`, `anthropic.claude-3-haiku-20240307-v1:0`
-- **Amazon Titan**: `amazon.titan-text-express-v1`, `amazon.titan-text-lite-v1`
+- **Amazon Titan**: `amazon.titan-text-express-v1`, `amazon.titan-text-lite-v1` 
 - **AI21 Jurassic**: `ai21.j2-ultra-v1`, `ai21.j2-mid-v1`
-- **Cohere Command**: `cohere.command-text-v14`, `cohere.command-light-text-v14`
 - **Meta Llama**: `meta.llama2-13b-chat-v1`, `meta.llama2-70b-chat-v1`
 
-## Best Practices Implemented
+Check AWS docs for the latest model IDs available in your region.
 
-1. **Security**
-   - WAF protection (optional)
-   - API key authentication
-   - Least privilege IAM roles
-   - VPC isolation support
-   - CloudWatch logging
+## Implementation Notes
 
-2. **Performance**
-   - Configurable Lambda settings
-   - Response caching support
-   - Efficient token usage
-   - Request batching capability
+**Security**: Module creates minimal IAM permissions. WAF provides basic DDoS protection but doesn't replace proper API design.
 
-3. **Reliability**
-   - Automatic retries
-   - Circuit breaker pattern
-   - Error handling
-   - Fallback models
+**Performance**: Lambda cold starts add ~1-2 seconds to first requests. Consider provisioned concurrency for latency-sensitive applications.
 
-4. **Cost Optimization**
-   - Configurable rate limits
-   - Token usage monitoring
-   - Resource tagging
-   - Cost allocation support
+**Cost**: Bedrock charges per token. Monitor usage via CloudWatch metrics to avoid surprises.
 
-5. **Operational Excellence**
-   - Comprehensive monitoring
-   - Detailed logging
-   - Alarm configuration
-   - Performance metrics
+**Reliability**: No built-in retry logic for Bedrock API calls. Consider implementing client-side retries for production use.
 
-## Terraform State Management
+## State Management
 
-This module is designed to work with both local and remote state. For production use, we recommend:
-
-1. Use remote state storage (e.g., S3 + DynamoDB)
-2. Enable state locking
-3. Enable state encryption
-4. Use workspaces for multi-environment management
-
-Example backend configuration:
+For production deployments, use remote state storage:
 
 ```hcl
 terraform {
   backend "s3" {
-    bucket         = "my-terraform-states"
-    key            = "bedrock-api/terraform.tfstate"
-    region         = "us-east-1"
-    encrypt        = true
-    dynamodb_table = "terraform-locks"
+    bucket = "my-terraform-states"
+    key    = "bedrock-api/terraform.tfstate"
+    region = "us-east-1"
   }
 }
 ```
 
-## Upgrade Guide
-
-### Upgrading from v1.x to v2.x
-
-1. Update your module source to reference v2.x
-2. Review the breaking changes in CHANGELOG.md
-3. Update your variable declarations as needed
-4. Run `terraform init -upgrade`
-5. Review the plan before applying
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Commit your changes with conventional commits
-4. Update documentation and examples
-5. Submit a pull request
-
-## Authors
-
-Module maintained by:
-- Your Organization (@github-handle)
-- Contributors List
-
 ## License
 
-Apache 2.0 Licensed. See [LICENSE](LICENSE) for full details.
-
-## Security Considerations
-
-1. **IAM Roles**: The module creates least-privilege IAM roles for Lambda
-2. **WAF Protection**: Optional WAF with rate limiting and AWS managed rules
-3. **API Key Authentication**: Optional API key-based authentication
-4. **CORS Configuration**: Configurable CORS settings for web applications
-5. **Logging**: Comprehensive CloudWatch logging for audit trails
-
-## Monitoring and Alerting
-
-The module includes:
-
-- **CloudWatch Alarms**: Lambda errors and duration monitoring
-- **Log Retention**: Configurable log retention periods
-- **Custom Metrics**: Execution time and request tracking
-- **Alarm Actions**: Integration with SNS topics for notifications
-
-## Cost Optimization
-
-- **Lambda Configuration**: Optimize memory and timeout settings
-- **Log Retention**: Reduce log retention for non-production environments
-- **WAF**: Only enable WAF when needed for production workloads
-- **API Key**: Use API keys to control and monitor usage
-
-## Troubleshooting
-
-### Common Issues
-
-1. **Bedrock Access Denied**: Ensure Bedrock is enabled in your AWS region
-2. **Lambda Timeout**: Increase `lambda_timeout` for complex prompts
-3. **Memory Issues**: Increase `lambda_memory_size` for large responses
-4. **CORS Errors**: Verify `cors_allowed_origins` includes your domain
-
-### Debugging
-
-1. Check CloudWatch logs for Lambda function errors
-2. Verify API Gateway logs for request/response issues
-3. Test Bedrock access directly using AWS CLI
-4. Validate IAM permissions for all services
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
-
-## License
-
-This module is licensed under the MIT License. See the LICENSE file for details.
-
-## Support
-
-For issues and questions:
-- Create an issue in the repository
-- Check the troubleshooting section
-- Review AWS documentation for Bedrock, Lambda, and API Gateway
+Apache 2.0 Licensed. See [LICENSE](LICENSE) for details.

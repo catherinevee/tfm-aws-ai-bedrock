@@ -1,11 +1,10 @@
-# Amazon Bedrock + Lambda + API Gateway Terraform Module
-# This module creates a complete serverless AI solution using Amazon Bedrock, Lambda, and API Gateway
+# AWS Bedrock API Infrastructure
+# Creates Lambda function + API Gateway to expose Bedrock models via HTTP
 
-# Data sources
 data "aws_caller_identity" "current" {}
 data "aws_region" "current" {}
 
-# IAM Role for Lambda
+# Lambda execution role
 resource "aws_iam_role" "lambda_role" {
   name = "${var.name_prefix}-bedrock-lambda-role"
 
@@ -25,10 +24,10 @@ resource "aws_iam_role" "lambda_role" {
   tags = var.tags
 }
 
-# IAM Policy for Lambda to access Bedrock
+# IAM policy for Bedrock access and CloudWatch logging
 resource "aws_iam_policy" "bedrock_policy" {
   name        = "${var.name_prefix}-bedrock-policy"
-  description = "Policy for Lambda to access Amazon Bedrock"
+  description = "Bedrock model access and CloudWatch logging permissions"
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -45,7 +44,7 @@ resource "aws_iam_policy" "bedrock_policy" {
         Effect = "Allow"
         Action = [
           "logs:CreateLogGroup",
-          "logs:CreateLogStream",
+          "logs:CreateLogStream", 
           "logs:PutLogEvents"
         ]
         Resource = "arn:aws:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:*"
@@ -54,25 +53,24 @@ resource "aws_iam_policy" "bedrock_policy" {
   })
 }
 
-# Attach policy to Lambda role
+# Attach policy to role
 resource "aws_iam_role_policy_attachment" "lambda_bedrock_policy" {
   role       = aws_iam_role.lambda_role.name
   policy_arn = aws_iam_policy.bedrock_policy.arn
 }
 
-# CloudWatch Log Group for Lambda
+# Lambda logs - created first to avoid permission issues
 resource "aws_cloudwatch_log_group" "lambda_logs" {
-  name              = local.log_group_name
+  name              = "/aws/lambda/${var.name_prefix}-bedrock-lambda"
   retention_in_days = var.log_retention_days
-  kms_key_id       = var.enable_cloudwatch_logs_encryption ? data.aws_kms_key.cloudwatch[0].arn : null
 
-  tags = local.common_tags
+  tags = var.tags
 }
 
-# Lambda Function
+# Python Lambda function for Bedrock API calls
 resource "aws_lambda_function" "bedrock_lambda" {
   filename         = data.archive_file.lambda_zip.output_path
-  function_name    = local.lambda_name
+  function_name    = "${var.name_prefix}-bedrock-lambda"
   role            = aws_iam_role.lambda_role.arn
   handler         = "index.handler"
   runtime         = var.lambda_runtime
@@ -87,6 +85,7 @@ resource "aws_lambda_function" "bedrock_lambda" {
     }
   }
 
+  # VPC configuration if subnets provided
   dynamic "vpc_config" {
     for_each = var.vpc_subnet_ids != null ? [1] : []
     content {
@@ -100,7 +99,7 @@ resource "aws_lambda_function" "bedrock_lambda" {
     aws_cloudwatch_log_group.lambda_logs
   ]
 
-  tags = local.common_tags
+  tags = var.tags
 }
 
 # Lambda function code archive
@@ -224,7 +223,6 @@ resource "aws_api_gateway_deployment" "bedrock_deployment" {
   ]
 
   rest_api_id = aws_api_gateway_rest_api.bedrock_api.id
-  stage_name  = var.api_stage_name
 
   lifecycle {
     create_before_destroy = true
